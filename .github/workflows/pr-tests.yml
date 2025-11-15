@@ -1,0 +1,40 @@
+name: PR Tests and Coverage Report
+
+on:
+  pull_request:
+    branches: [ "**" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Build and run tests (Common, Selenium)
+        run: |
+          mvn -B -U -Dskip.selenium.tests=false -pl Common,Selenium,Playwright -am test
+
+      - name: Generate coverage and pass rate report
+        env:
+          REPORT_MODULES: "Common Selenium"
+        run: |
+          python3 scripts/report_coverage.py > pr_report.md
+
+      - name: Add PR comment with results
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body-file: pr_report.md
