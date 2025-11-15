@@ -36,7 +36,7 @@ jobs:
 
       - name: Generate coverage and pass rate report
         env:
-          REPORT_MODULES: "Common"
+          REPORT_MODULES: "RestAssured:Common Selenium:Common Playwright:Common"
         run: |
           python3 scripts/report_coverage.py > pr_report.md
 

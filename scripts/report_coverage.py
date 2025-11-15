@@ -19,7 +19,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def parse_surefire(module_dir: Path):
+def parse_surefire(module_dir: Path, *, test_name_prefixes=None):
     report_dir = module_dir / 'target' / 'surefire-reports'
     total = passed = failed = skipped = 0
 
@@ -30,6 +30,11 @@ def parse_surefire(module_dir: Path):
         try:
             tree = ET.parse(xml_file)
             root = tree.getroot()
+            # Filter by testsuite name when prefixes provided
+            if test_name_prefixes:
+                suite_name = root.attrib.get('name', '')
+                if not any(suite_name.startswith(pfx) for pfx in test_name_prefixes):
+                    continue
             tests = int(root.attrib.get('tests', '0'))
             failures = int(root.attrib.get('failures', '0'))
             errors = int(root.attrib.get('errors', '0'))
@@ -44,7 +49,7 @@ def parse_surefire(module_dir: Path):
     return total, passed, failed, skipped
 
 
-def parse_jacoco(module_dir: Path):
+def parse_jacoco(module_dir: Path, *, package_prefixes=None):
     jacoco_xml = module_dir / 'target' / 'site' / 'jacoco' / 'jacoco.xml'
     if not jacoco_xml.exists():
         return None  # n/a
@@ -52,10 +57,20 @@ def parse_jacoco(module_dir: Path):
         tree = ET.parse(jacoco_xml)
         root = tree.getroot()
         covered = missed = 0
-        for counter in root.iter('counter'):
-            if counter.attrib.get('type') == 'INSTRUCTION':
-                missed += int(counter.attrib.get('missed', '0'))
-                covered += int(counter.attrib.get('covered', '0'))
+        # When filtering by package prefixes, only sum counters within matching packages
+        if package_prefixes:
+            for pkg in root.iter('package'):
+                name = pkg.attrib.get('name', '')
+                if any(name.startswith(pfx) for pfx in package_prefixes):
+                    for counter in pkg.iter('counter'):
+                        if counter.attrib.get('type') == 'INSTRUCTION':
+                            missed += int(counter.attrib.get('missed', '0'))
+                            covered += int(counter.attrib.get('covered', '0'))
+        else:
+            for counter in root.iter('counter'):
+                if counter.attrib.get('type') == 'INSTRUCTION':
+                    missed += int(counter.attrib.get('missed', '0'))
+                    covered += int(counter.attrib.get('covered', '0'))
         total = missed + covered
         if total == 0:
             return 0.0
@@ -96,8 +111,33 @@ def main():
     print("|---|---:|---:|---:|---:|---:|---:|")
     for label, module in modules:
         module_dir = ROOT / module
-        total, passed, failed, skipped = parse_surefire(module_dir)
-        coverage = parse_jacoco(module_dir)
+        # Optional fine-grained filters when summarizing Common into RestAssured/Selenium/Playwright
+        test_prefixes = None
+        pkg_prefixes = None
+        if module == 'Common':
+            mapping = {
+                'RestAssured': {
+                    'tests': ['core.api.impl.'],
+                    'packages': ['core/api/impl', 'core.api.impl', 'core/api', 'core'],  # handle both xml notations
+                },
+                'Selenium': {
+                    'tests': ['ui.SeleniumActionsTest'],
+                    'packages': ['selenium'],
+                },
+                'Playwright': {
+                    'tests': ['ui.PlaywrightActionsTest'],
+                    'packages': ['playwright'],
+                },
+            }
+            if label in mapping:
+                test_prefixes = mapping[label]['tests']
+                # JaCoCo package names in XML use slash-separated names, but in our generated file
+                # packages appear as simple names like "selenium" or "playwright" for those namespaces,
+                # and "core.api.impl" for API code. We'll check both forms just in case.
+                pkg_prefixes = mapping[label]['packages']
+
+        total, passed, failed, skipped = parse_surefire(module_dir, test_name_prefixes=test_prefixes)
+        coverage = parse_jacoco(module_dir, package_prefixes=pkg_prefixes)
         pass_rate = (passed * 100.0 / total) if total else (100.0 if passed == 0 and failed == 0 else 0.0)
         cov_str = 'n/a' if coverage is None else f"{coverage:.1f}%"
         print(f"| {label} | {total} | {passed} | {failed} | {skipped} | {pass_rate:.1f}% | {cov_str} |")
