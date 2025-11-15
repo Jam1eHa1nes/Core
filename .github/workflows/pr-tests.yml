@@ -1,7 +1,7 @@
 name: PR Tests and Coverage Report
 
 on:
-  pull_request_target:
+  pull_request:
     branches: [ "**" ]
 
 permissions:
@@ -30,13 +30,13 @@ jobs:
           java-version: '17'
           cache: maven
 
-      - name: Build and run tests (Common API, Selenium, Playwright)
+      - name: Build and run tests (Common)
         run: |
-          mvn -B -U -Dskip.selenium.tests=false -pl Common,Selenium,Playwright -am test
+          mvn -B -U -Dskip.selenium.tests=false -pl Common -am test
 
       - name: Generate coverage and pass rate report
         env:
-          REPORT_MODULES: "Common Selenium"
+          REPORT_MODULES: "RestAssured:Common Selenium:Common Playwright:Common"
         run: |
           python3 scripts/report_coverage.py > pr_report.md
 
