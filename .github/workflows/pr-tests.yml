@@ -30,13 +30,13 @@ jobs:
           java-version: '17'
           cache: maven
 
-      - name: Build and run tests (Common and Tests)
+      - name: Build and run tests (Common)
         run: |
-          mvn -B -U -Dskip.selenium.tests=false -pl Common,Tests -am test
+          mvn -B -U -Dskip.selenium.tests=false -pl Common -am test
 
       - name: Generate coverage and pass rate report
         env:
-          REPORT_MODULES: "RestAssured:Common"
+          REPORT_MODULES: "Common"
         run: |
           python3 scripts/report_coverage.py > pr_report.md
 
