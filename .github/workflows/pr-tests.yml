@@ -1,15 +1,24 @@
 name: PR Tests and Coverage Report
 
 on:
-  pull_request:
+  pull_request_target:
     branches: [ "**" ]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout PR code safely
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Setup Chrome
         uses: browser-actions/setup-chrome@v1
@@ -21,7 +30,7 @@ jobs:
           java-version: '17'
           cache: maven
 
-      - name: Build and run tests (Common, Selenium)
+      - name: Build and run tests (Common API, Selenium, Playwright)
         run: |
           mvn -B -U -Dskip.selenium.tests=false -pl Common,Selenium,Playwright -am test
 
@@ -32,7 +41,6 @@ jobs:
           python3 scripts/report_coverage.py > pr_report.md
 
       - name: Add PR comment with results
-        if: ${{ github.event_name == 'pull_request' }}
         uses: peter-evans/create-or-update-comment@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
