@@ -75,24 +75,32 @@ def format_row(module, total, passed, failed, skipped, coverage):
 
 def main():
     modules_env = os.environ.get('REPORT_MODULES', '').strip()
-    modules = [m for m in modules_env.split() if m]
+    raw_modules = [m for m in modules_env.split() if m]
+    # Support alias syntax: Label:DirName (e.g., "RestAssured:Common").
+    # If no colon provided, label == dirname.
+    modules = []  # list of tuples (label, dirname)
+    for item in raw_modules:
+        if ':' in item:
+            label, dirname = item.split(':', 1)
+            if label and dirname:
+                modules.append((label, dirname))
+        else:
+            modules.append((item, item))
     if not modules:
         # Fallback: detect modules that have a pom.xml next to parent
-        modules = [p.name for p in ROOT.iterdir() if (p / 'pom.xml').exists()]
+        detected = [p.name for p in ROOT.iterdir() if (p / 'pom.xml').exists()]
+        modules = [(name, name) for name in detected]
 
-    lines = []
-    lines.append('Module\tTests\tPassed\tFailed\tSkipped\tPass rate\tCoverage')
-    for module in modules:
+    # Print GitHub-friendly Markdown table
+    print("| Module | Tests | Passed | Failed | Skipped | Pass rate | Coverage |")
+    print("|---|---:|---:|---:|---:|---:|---:|")
+    for label, module in modules:
         module_dir = ROOT / module
         total, passed, failed, skipped = parse_surefire(module_dir)
         coverage = parse_jacoco(module_dir)
-        lines.append(format_row(module, total, passed, failed, skipped, coverage))
-
-    # Print Markdown code block with a TSV table for readability in PR comment
-    print("```")
-    for ln in lines:
-        print(ln)
-    print("```")
+        pass_rate = (passed * 100.0 / total) if total else (100.0 if passed == 0 and failed == 0 else 0.0)
+        cov_str = 'n/a' if coverage is None else f"{coverage:.1f}%"
+        print(f"| {label} | {total} | {passed} | {failed} | {skipped} | {pass_rate:.1f}% | {cov_str} |")
 
 
 if __name__ == '__main__':

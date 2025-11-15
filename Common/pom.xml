@@ -19,6 +19,17 @@
             <artifactId>rest-assured</artifactId>
             <version>5.5.0</version>
         </dependency>
+        <!-- UI automation implementations moved into Common -->
+        <dependency>
+            <groupId>com.microsoft.playwright</groupId>
+            <artifactId>playwright</artifactId>
+            <version>1.39.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.seleniumhq.selenium</groupId>
+            <artifactId>selenium-java</artifactId>
+            <version>4.15.0</version>
+        </dependency>
         <!-- JUnit 4 for unit tests in this module -->
         <dependency>
             <groupId>junit</groupId>
@@ -63,9 +74,11 @@
                     <outputDirectory>${project.build.directory}/site/jacoco</outputDirectory>
                     <dataFile>${project.build.directory}/jacoco.exec</dataFile>
                     <skip>false</skip>
-                    <!-- Limit instrumentation to our project classes to avoid JDK 25 incompatibilities -->
+                    <!-- Instrument all subpackages for accurate coverage -->
                     <includes>
-                        <include>core/*</include>
+                        <include>core/**</include>
+                        <include>playwright/**</include>
+                        <include>selenium/**</include>
                     </includes>
                 </configuration>
             </plugin>

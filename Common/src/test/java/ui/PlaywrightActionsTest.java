@@ -37,51 +37,90 @@ public class PlaywrightActionsTest {
     }
 
     @Test
-    public void testBasicInteractions() {
+    public void testOpenTitleAndUrl() {
         ui.open(pages.page1.toUri().toString());
-
         assertEquals("Test Page", ui.title());
         assertTrue(ui.url().startsWith("file:"));
+    }
 
-        // exists and visibility
+    @Test
+    public void testExists() {
+        ui.open(pages.page1.toUri().toString());
         assertTrue(ui.exists("#text"));
+    }
+
+    @Test
+    public void testIsVisible() {
+        ui.open(pages.page1.toUri().toString());
         assertTrue(ui.isVisible("#text"));
+    }
 
-        // getText
+    @Test
+    public void testGetText() {
+        ui.open(pages.page1.toUri().toString());
         assertEquals("Hello World", ui.getText("#text").trim());
+    }
 
-        // attribute
+    @Test
+    public void testAttribute() {
+        ui.open(pages.page1.toUri().toString());
         assertEquals("greeting", ui.attribute("#text", "data-custom"));
+    }
 
-        // value + compose
+    @Test
+    public void testValue() {
+        ui.open(pages.page1.toUri().toString());
         assertEquals("", ui.value("#name"));
-        ui.compose("#name", "Alice");
-        assertEquals("Alice", ui.value("#name"));
         // value() fallback path on non-input element should return text content
         assertEquals("Hello World", ui.value("#text").trim());
+    }
 
-        // focus should set attribute via onfocus script
+    @Test
+    public void testCompose() {
+        ui.open(pages.page1.toUri().toString());
+        ui.compose("#name", "Alice");
+        assertEquals("Alice", ui.value("#name"));
+    }
+
+    @Test
+    public void testFocus() {
+        ui.open(pages.page1.toUri().toString());
         ui.focus("#name");
         assertEquals("true", ui.attribute("#name", "data-focused"));
+    }
 
-        // click and verify result text
+    @Test
+    public void testClick() {
+        ui.open(pages.page1.toUri().toString());
         ui.click("#btn");
         assertEquals("Clicked!", ui.getText("#clickResult"));
+    }
 
-        // hover reveals sibling
+    @Test
+    public void testHover() {
+        ui.open(pages.page1.toUri().toString());
         ui.hover("#hoverTarget");
         assertTrue(ui.isVisible("#hoverResult"));
+    }
 
-        // delayed visibility
+    @Test
+    public void testWaitForVisible() {
+        ui.open(pages.page1.toUri().toString());
         ui.waitForVisible("#delayed", 3000);
         assertTrue(ui.isVisible("#delayed"));
+    }
 
-        // screenshot
-        Path shot = Path.of(System.getProperty("java.io.tmpdir"), "pw-shot.png");
+    @Test
+    public void testScreenshot() {
+        ui.open(pages.page1.toUri().toString());
+        Path shot = Path.of(System.getProperty("java.io.tmpdir"), "pw-shot-" + System.nanoTime() + ".png");
         ui.screenshot(shot.toString());
         assertTrue(java.nio.file.Files.exists(shot));
+    }
 
-        // navigation and back
+    @Test
+    public void testBackNavigation() {
+        ui.open(pages.page1.toUri().toString());
         ui.click("#nav");
         assertEquals("Second Page", ui.title());
         ui.back();

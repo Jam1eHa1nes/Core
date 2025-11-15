@@ -23,16 +23,6 @@
             <artifactId>Common</artifactId>
             <version>1.0</version>
         </dependency>
-        <dependency>
-            <groupId>jamiehaines</groupId>
-            <artifactId>Playwright-Core</artifactId>
-            <version>1.0</version>
-        </dependency>
-        <dependency>
-            <groupId>jamiehaines</groupId>
-            <artifactId>Selenium-Core</artifactId>
-            <version>1.0</version>
-        </dependency>
 
         <!-- RestAssured for API testing -->
         <dependency>

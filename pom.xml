@@ -12,8 +12,6 @@
 
     <modules>
         <module>Common</module>
-        <module>Playwright</module>
-        <module>Selenium</module>
         <module>Tests</module>
     </modules>
 
