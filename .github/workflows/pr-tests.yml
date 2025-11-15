@@ -1,0 +1,48 @@
+name: PR Tests and Coverage Report
+
+on:
+  pull_request_target:
+    branches: [ "**" ]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR code safely
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Build and run tests (Common API, Selenium, Playwright)
+        run: |
+          mvn -B -U -Dskip.selenium.tests=false -pl Common,Selenium,Playwright -am test
+
+      - name: Generate coverage and pass rate report
+        env:
+          REPORT_MODULES: "Common Selenium"
+        run: |
+          python3 scripts/report_coverage.py > pr_report.md
+
+      - name: Add PR comment with results
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body-file: pr_report.md
