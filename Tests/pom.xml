@@ -101,7 +101,7 @@
                 <executions>
                     <execution>
                         <id>allure-generate</id>
-                        <phase>verify</phase>
+                        <phase>site</phase>
                         <goals>
                             <goal>report</goal>
                         </goals>

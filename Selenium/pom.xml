@@ -19,6 +19,7 @@
     </properties>
 
     <dependencies>
+        <!-- Core shared interfaces and utilities -->
         <dependency>
             <groupId>jamiehaines</groupId>
             <artifactId>Common</artifactId>
