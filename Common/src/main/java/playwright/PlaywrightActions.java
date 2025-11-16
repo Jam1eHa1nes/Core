@@ -327,17 +327,39 @@ public class PlaywrightActions implements UiActions {
             case CSS -> target.value();
             case XPATH -> "xpath=" + target.value();
             case ID -> "#" + target.value();
-            case NAME -> "[name='" + escape(target.value()) + "']";
+            case NAME -> "[name=\"" + escapeCssDoubleQuoted(target.value()) + "\"]";
             case CLASS_NAME -> "." + target.value();
             case TAG_NAME -> target.value();
-            case LINK_TEXT -> "xpath=//a[normalize-space(text())='" + escapeForXPath(target.value()) + "']";
-            case PARTIAL_LINK_TEXT -> "xpath=//a[contains(normalize-space(text()), '" + escapeForXPath(target.value()) + "')]";
+            case LINK_TEXT -> "xpath=//a[normalize-space(text())=" + escapeForXPath(target.value()) + "]";
+            case PARTIAL_LINK_TEXT -> "xpath=//a[contains(normalize-space(text()), " + escapeForXPath(target.value()) + ")]";
             case TEXT -> "text=" + target.value();
-            case DATA_TEST_ID -> "[data-testid='" + escape(target.value()) + "']";
+            case DATA_TEST_ID -> "[data-testid=\"" + escapeCssDoubleQuoted(target.value()) + "\"]";
             case ROLE -> "role=" + target.value();
         };
     }
 
-    private String escape(String s) { return s.replace("'", "\\'"); }
-    private String escapeForXPath(String s) { return s.replace("'", "\"'\""); }
+    private String escapeCssDoubleQuoted(String s) {
+        // Escape backslash and double quotes for CSS double-quoted attribute selectors
+        return s.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    private String escapeForXPath(String s) {
+        // Return a valid XPath string literal representing s.
+        // If s contains no single quote, wrap with single quotes.
+        if (s.indexOf('\'') < 0) {
+            return "'" + s + "'";
+        }
+        // Otherwise, build concat('part1', "'", 'part2', ...)
+        String[] parts = s.split("'", -1); // keep empty parts
+        StringBuilder sb = new StringBuilder("concat(");
+        for (int i = 0; i < parts.length; i++) {
+            if (i > 0) sb.append(", ");
+            sb.append("'").append(parts[i]).append("'");
+            if (i < parts.length - 1) {
+                sb.append(", \"'\"");
+            }
+        }
+        sb.append(')');
+        return sb.toString();
+    }
 }

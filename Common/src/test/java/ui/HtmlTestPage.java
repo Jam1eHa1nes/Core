@@ -55,12 +55,15 @@ public final class HtmlTestPage {
                     "  <p id='text' data-custom='greeting'>Hello World</p>\n" +
                     "  <input id='name' type='text' value='' onfocus=\"this.setAttribute('data-focused','true')\">\n" +
                     "  <input id='byName' name='username' type='text' value=''>\n" +
+                    "  <input id=\"byNameQuote\" name=\"user'o\" type='text' value=''>\n" +
                     "  <button id='btn' onclick='clickMe()'>Click</button>\n" +
                     "  <div id='clickResult'></div>\n" +
                     "  <div id='hoverTarget'>Hover me</div>\n" +
                     "  <div id='hoverResult'>Hovered!</div>\n" +
                     "  <div id='delayed'>I appear later</div>\n" +
                     "  <a id='nav' href='" + page2.getFileName().toString() + "'>Go to Page 2</a>\n" +
+                    "  <a id='quoteLink' href='#'>Click 'Me'</a>\n" +
+                    "  <a id='partialQuoteLink' href='#'>has a 'quote' inside</a>\n" +
                     "  <div id='toHide'>I will hide</div>\n" +
                     "  <div id='dbl' ondblclick='onDouble()'>Double Click Me</div>\n" +
                     "  <div id='dblResult'></div>\n" +
