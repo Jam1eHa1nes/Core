@@ -121,12 +121,16 @@ def main():
                     'packages': ['core/api/impl', 'core.api.impl', 'core/api', 'core'],  # handle both xml notations
                 },
                 'Selenium': {
-                    'tests': ['ui.SeleniumActionsTest'],
-                    'packages': ['selenium'],
+                    # Include SeleniumActions and TargetFactory Selenium tests
+                    'tests': ['ui.SeleniumActionsTest', 'ui.TargetFactorySeleniumTest'],
+                    # Include selenium package and shared core.ui code covered by these tests
+                    'packages': ['selenium', 'core/ui', 'core.ui'],
                 },
                 'Playwright': {
-                    'tests': ['ui.PlaywrightActionsTest'],
-                    'packages': ['playwright'],
+                    # Include PlaywrightActions and TargetFactory Playwright tests
+                    'tests': ['ui.PlaywrightActionsTest', 'ui.TargetFactoryPlaywrightTest'],
+                    # Include playwright package and shared core.ui code covered by these tests
+                    'packages': ['playwright', 'core/ui', 'core.ui'],
                 },
             }
             if label in mapping:

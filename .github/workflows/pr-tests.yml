@@ -30,13 +30,20 @@ jobs:
           java-version: '17'
           cache: maven
 
-      - name: Build and run tests (Common)
+      - name: Build and run unit tests (Common)
         run: |
           mvn -B -U -Dskip.selenium.tests=false -pl Common -am test
 
-      - name: Generate coverage and pass rate report
+      - name: Build and run Cucumber feature tests (Tests module)
         env:
-          REPORT_MODULES: "RestAssured:Common Selenium:Common Playwright:Common"
+          # Ensure headless browsers in CI
+          MAVEN_OPTS: "-Dheadless=true"
+        run: |
+          mvn -B -U -pl Tests -am test -Dheadless=true
+
+      - name: Generate coverage and pass rate report (Common + Cucumber features)
+        env:
+          REPORT_MODULES: "RestAssured:Common Selenium:Common Playwright:Common Cucumber:Tests"
         run: |
           python3 scripts/report_coverage.py > pr_report.md
 
