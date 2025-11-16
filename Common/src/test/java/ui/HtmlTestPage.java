@@ -40,20 +40,47 @@ public final class HtmlTestPage {
                     "#hoverTarget:hover + #hoverResult { display:block; }\n" +
                     "#hoverResult { display:none; }\n" +
                     "#delayed { display:none; }\n" +
+                    "#spacer { height: 1500px; }\n" +
                     "</style>\n" +
                     "<script>\n" +
                     "function revealDelayed(){ setTimeout(function(){ document.getElementById('delayed').style.display='block'; }, 300); }\n" +
                     "function clickMe(){ document.getElementById('clickResult').textContent='Clicked!'; }\n" +
+                    "function onDouble(){ document.getElementById('dblResult').textContent='Double!'; }\n" +
+                    "function onChangeSelect(e){ document.getElementById('selValue').textContent=e.target.value; }\n" +
+                    "function onKey(e){ document.getElementById('keyResult').textContent=e.key; }\n" +
+                    "function onFile(e){ var f=e.target.files && e.target.files[0]; if(f){ e.target.setAttribute('data-file-name', f.name); e.target.setAttribute('data-file-loaded','true'); } }\n" +
+                    "function hideSoon(){ setTimeout(function(){ var el=document.getElementById('toHide'); if(el){ el.style.display='none'; } }, 300); }\n" +
                     "</script>\n" +
-                    "</head><body onload='revealDelayed()'>\n" +
+                    "</head><body onload='revealDelayed();hideSoon()'>\n" +
                     "  <p id='text' data-custom='greeting'>Hello World</p>\n" +
                     "  <input id='name' type='text' value='' onfocus=\"this.setAttribute('data-focused','true')\">\n" +
+                    "  <input id='byName' name='username' type='text' value=''>\n" +
+                    "  <input id=\"byNameQuote\" name=\"user'o\" type='text' value=''>\n" +
                     "  <button id='btn' onclick='clickMe()'>Click</button>\n" +
                     "  <div id='clickResult'></div>\n" +
                     "  <div id='hoverTarget'>Hover me</div>\n" +
                     "  <div id='hoverResult'>Hovered!</div>\n" +
                     "  <div id='delayed'>I appear later</div>\n" +
                     "  <a id='nav' href='" + page2.getFileName().toString() + "'>Go to Page 2</a>\n" +
+                    "  <a id='quoteLink' href='#'>Click 'Me'</a>\n" +
+                    "  <a id='partialQuoteLink' href='#'>has a 'quote' inside</a>\n" +
+                    "  <div id='toHide'>I will hide</div>\n" +
+                    "  <div id='dbl' ondblclick='onDouble()'>Double Click Me</div>\n" +
+                    "  <div id='dblResult'></div>\n" +
+                    "  <div id='byClass' class='sample-class'>By Class</div>\n" +
+                    "  <select id='sel' onchange='onChangeSelect(event)'>\n" +
+                    "    <option value='v1'>Label One</option>\n" +
+                    "    <option value='v2'>Label Two</option>\n" +
+                    "  </select>\n" +
+                    "  <div id='selValue'></div>\n" +
+                    "  <input id='chk' type='checkbox' onchange=\"this.setAttribute('data-checked', this.checked ? 'true' : 'false')\">\n" +
+                    "  <input id='key' type='text' onkeydown='onKey(event)'>\n" +
+                    "  <div id='keyResult'></div>\n" +
+                    "  <input id='file' type='file' onchange='onFile(event)'>\n" +
+                    "  <div id='byDataTest' data-testid='test-elem'>DataTestId</div>\n" +
+                    "  <div id='byRole' role='dialog'>Dialog Role</div>\n" +
+                    "  <div id='spacer'></div>\n" +
+                    "  <div id='bottom'>Bottom</div>\n" +
                     "</body></html>";
             Files.write(page1, html1.getBytes(StandardCharsets.UTF_8));
 

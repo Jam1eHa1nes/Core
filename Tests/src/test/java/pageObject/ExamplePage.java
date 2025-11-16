@@ -1,6 +1,7 @@
 package pageObject;
 
 import core.ui.UiActions;
+import core.ui.TargetFactory;
 
 public class ExamplePage {
     private final UiActions ui;
@@ -15,23 +16,23 @@ public class ExamplePage {
 
     public String headingText() {
         // Example.com has h1 with text "Example Domain"
-        return ui.getText("h1");
+        return ui.getText(TargetFactory.css("h1"));
     }
 
     // Expose all available UiActions so they are used by tests
     public void focus(String selector) {
-        ui.focus(selector);
+        ui.focus(TargetFactory.css(selector));
     }
 
     public void type(String selector, String text) {
-        ui.compose(selector, text);
+        ui.compose(TargetFactory.css(selector), text);
     }
 
     public void click(String selector) {
-        ui.click(selector);
+        ui.click(TargetFactory.css(selector));
     }
 
     public String text(String selector) {
-        return ui.getText(selector);
+        return ui.getText(TargetFactory.css(selector));
     }
 }

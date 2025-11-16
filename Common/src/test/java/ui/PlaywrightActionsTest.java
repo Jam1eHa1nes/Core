@@ -6,6 +6,7 @@ import org.junit.Before;
 import org.junit.Test;
 import playwright.PlaywrightActions;
 import core.ui.UiActions;
+import core.ui.TargetFactory;
 
 import java.nio.file.Path;
 
@@ -46,68 +47,68 @@ public class PlaywrightActionsTest {
     @Test
     public void testExists() {
         ui.open(pages.page1.toUri().toString());
-        assertTrue(ui.exists("#text"));
+        assertTrue(ui.exists(TargetFactory.css("#text")));
     }
 
     @Test
     public void testIsVisible() {
         ui.open(pages.page1.toUri().toString());
-        assertTrue(ui.isVisible("#text"));
+        assertTrue(ui.isVisible(TargetFactory.css("#text")));
     }
 
     @Test
     public void testGetText() {
         ui.open(pages.page1.toUri().toString());
-        assertEquals("Hello World", ui.getText("#text").trim());
+        assertEquals("Hello World", ui.getText(TargetFactory.css("#text")).trim());
     }
 
     @Test
     public void testAttribute() {
         ui.open(pages.page1.toUri().toString());
-        assertEquals("greeting", ui.attribute("#text", "data-custom"));
+        assertEquals("greeting", ui.attribute(TargetFactory.css("#text"), "data-custom"));
     }
 
     @Test
     public void testValue() {
         ui.open(pages.page1.toUri().toString());
-        assertEquals("", ui.value("#name"));
+        assertEquals("", ui.value(TargetFactory.css("#name")));
         // value() fallback path on non-input element should return text content
-        assertEquals("Hello World", ui.value("#text").trim());
+        assertEquals("Hello World", ui.value(TargetFactory.css("#text")).trim());
     }
 
     @Test
     public void testCompose() {
         ui.open(pages.page1.toUri().toString());
-        ui.compose("#name", "Alice");
-        assertEquals("Alice", ui.value("#name"));
+        ui.compose(TargetFactory.css("#name"), "Alice");
+        assertEquals("Alice", ui.value(TargetFactory.css("#name")));
     }
 
     @Test
     public void testFocus() {
         ui.open(pages.page1.toUri().toString());
-        ui.focus("#name");
-        assertEquals("true", ui.attribute("#name", "data-focused"));
+        ui.focus(TargetFactory.css("#name"));
+        assertEquals("true", ui.attribute(TargetFactory.css("#name"), "data-focused"));
     }
 
     @Test
     public void testClick() {
         ui.open(pages.page1.toUri().toString());
-        ui.click("#btn");
-        assertEquals("Clicked!", ui.getText("#clickResult"));
+        ui.click(TargetFactory.css("#btn"));
+        assertEquals("Clicked!", ui.getText(TargetFactory.css("#clickResult")));
     }
 
     @Test
     public void testHover() {
         ui.open(pages.page1.toUri().toString());
-        ui.hover("#hoverTarget");
-        assertTrue(ui.isVisible("#hoverResult"));
+        ui.hover(TargetFactory.css("#hoverTarget"));
+        assertTrue(ui.isVisible(TargetFactory.css("#hoverResult")));
     }
 
     @Test
     public void testWaitForVisible() {
         ui.open(pages.page1.toUri().toString());
-        ui.waitForVisible("#delayed", 3000);
-        assertTrue(ui.isVisible("#delayed"));
+        ui.waitForVisible(TargetFactory.css("#delayed"), 3000);
+        assertTrue(ui.isVisible(TargetFactory.css("#delayed")));
     }
 
     @Test
@@ -121,9 +122,127 @@ public class PlaywrightActionsTest {
     @Test
     public void testBackNavigation() {
         ui.open(pages.page1.toUri().toString());
-        ui.click("#nav");
+        ui.click(TargetFactory.css("#nav"));
         assertEquals("Second Page", ui.title());
         ui.back();
         assertEquals("Test Page", ui.title());
+    }
+
+    @Test
+    public void testRefreshClearsState() {
+        ui.open(pages.page1.toUri().toString());
+        ui.compose(TargetFactory.css("#name"), "Temp");
+        assertEquals("Temp", ui.value(TargetFactory.css("#name")));
+        ui.refresh();
+        assertEquals("", ui.value(TargetFactory.css("#name")));
+    }
+
+    @Test
+    public void testForwardNavigation() {
+        ui.open(pages.page1.toUri().toString());
+        ui.click(TargetFactory.css("#nav"));
+        assertEquals("Second Page", ui.title());
+        ui.back();
+        assertEquals("Test Page", ui.title());
+        ui.forward();
+        assertEquals("Second Page", ui.title());
+    }
+
+    @Test
+    public void testClear() {
+        ui.open(pages.page1.toUri().toString());
+        ui.compose(TargetFactory.css("#name"), "Alice");
+        assertEquals("Alice", ui.value(TargetFactory.css("#name")));
+        ui.clear(TargetFactory.css("#name"));
+        assertEquals("", ui.value(TargetFactory.css("#name")));
+    }
+
+    @Test
+    public void testDoubleClick() {
+        ui.open(pages.page1.toUri().toString());
+        ui.doubleClick(TargetFactory.css("#dbl"));
+        assertEquals("Double!", ui.getText(TargetFactory.css("#dblResult")));
+    }
+
+    @Test
+    public void testSelectByTextAndValue() {
+        ui.open(pages.page1.toUri().toString());
+        ui.selectByText(TargetFactory.css("#sel"), "Label Two");
+        assertEquals("v2", ui.getText(TargetFactory.css("#selValue")));
+        ui.selectByValue(TargetFactory.css("#sel"), "v1");
+        assertEquals("v1", ui.getText(TargetFactory.css("#selValue")));
+    }
+
+    @Test
+    public void testWaitForHidden() {
+        ui.open(pages.page1.toUri().toString());
+        ui.waitForHidden(TargetFactory.css("#toHide"), 3000);
+        assertFalse(ui.isVisible(TargetFactory.css("#toHide")));
+    }
+
+    @Test
+    public void testScrollIntoView() {
+        ui.open(pages.page1.toUri().toString());
+        // Should not throw
+        ui.scrollIntoView(TargetFactory.css("#bottom"));
+        assertTrue(ui.exists(TargetFactory.css("#bottom")));
+    }
+
+    @Test
+    public void testPressString() {
+        ui.open(pages.page1.toUri().toString());
+        ui.focus(TargetFactory.css("#key"));
+        ui.press(TargetFactory.css("#key"), "Enter");
+        assertEquals("Enter", ui.getText(TargetFactory.css("#keyResult")));
+    }
+
+    @Test
+    public void testSetCheckedAndUploadFile() throws Exception {
+        ui.open(pages.page1.toUri().toString());
+        // setChecked
+        ui.setChecked(TargetFactory.css("#chk"), true);
+        assertEquals("true", ui.attribute(TargetFactory.css("#chk"), "data-checked"));
+        ui.setChecked(TargetFactory.css("#chk"), false);
+        assertEquals("false", ui.attribute(TargetFactory.css("#chk"), "data-checked"));
+
+        // uploadFile
+        java.nio.file.Path tmp = java.nio.file.Files.createTempFile("upl-", ".txt");
+        java.nio.file.Files.writeString(tmp, "data");
+        ui.uploadFile(TargetFactory.css("#file"), tmp.toString());
+        assertEquals(tmp.getFileName().toString(), ui.attribute(TargetFactory.css("#file"), "data-file-name"));
+        assertEquals("true", ui.attribute(TargetFactory.css("#file"), "data-file-loaded"));
+    }
+
+    // ----- New selector-less context tests -----
+
+    @Test
+    public void testClickWithoutSelectorAfterFind() {
+        ui.open(pages.page1.toUri().toString());
+        ui.focus(TargetFactory.css("#btn"));
+        ui.click();
+        assertEquals("Clicked!", ui.getText(TargetFactory.css("#clickResult")));
+    }
+
+    @Test
+    public void testComposeAndReadWithoutSelector() {
+        ui.open(pages.page1.toUri().toString());
+        ui.focus(TargetFactory.css("#name"));
+        ui.compose("Charlie");
+        assertEquals("Charlie", ui.value(TargetFactory.css("#name")));
+        // Now read using context
+        ui.focus(TargetFactory.css("#text"));
+        assertEquals("Hello World", ui.getText().trim());
+    }
+
+    @Test
+    public void testSelectAndPressWithoutSelector() {
+        ui.open(pages.page1.toUri().toString());
+        ui.focus(TargetFactory.css("#sel"));
+        ui.selectByText("Label One");
+        assertEquals("v1", ui.getText(TargetFactory.css("#selValue")));
+        ui.focus(TargetFactory.css("#key"));
+        ui.focus(TargetFactory.css("#key")); // sets context too
+        ui.press("Enter");
+        assertEquals("Enter", ui.getText(TargetFactory.css("#keyResult")));
     }
 }
