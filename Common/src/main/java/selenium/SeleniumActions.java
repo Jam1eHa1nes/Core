@@ -55,6 +55,19 @@ public class SeleniumActions implements UiActions {
             // Use new headless for modern Chrome
             options.addArguments("--headless=new");
         }
+
+        // Improve stability in CI/containerized environments (e.g., GitHub Actions)
+        // These flags are no-ops on local machines but prevent Chrome from crashing in sandboxed runners.
+        // Apply when headless or when CI environment variable is present.
+        boolean isCi = Boolean.parseBoolean(System.getenv().getOrDefault("CI", "false"));
+        if (headless || isCi) {
+            options.addArguments("--no-sandbox");
+            options.addArguments("--disable-dev-shm-usage");
+            // Avoid origin checks that can fail under some runner network setups
+            options.addArguments("--remote-allow-origins=*");
+            // Set a deterministic window size so some layouts don’t hide elements
+            options.addArguments("--window-size=1920,1080");
+        }
         this.driver = new ChromeDriver(options);
     }
 
