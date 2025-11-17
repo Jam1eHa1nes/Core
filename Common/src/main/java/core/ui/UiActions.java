@@ -159,4 +159,27 @@ public interface UiActions {
 
     /** Upload a file using the current element context. */
     void uploadFile(String path);
+
+    // ---- Collection utilities ----
+
+    /**
+     * Collect all elements that match the given target (locator) on the current page/view and
+     * store them internally for later inspection via size(). Implementations should overwrite any
+     * previously collected elements.
+     */
+    void collect(Target target);
+
+    /**
+     * Return the number of elements previously collected via collect(target). If collect() hasn't
+     * been called yet, this should return 0.
+     */
+    int size();
+
+    /**
+     * Choose a single element by index from the most recently collected elements. Subsequent
+     * actions that operate on the current element context should target the chosen element.
+     * Implementations should throw IndexOutOfBoundsException if the index is invalid, or
+     * IllegalStateException if collect() has not been called yet.
+     */
+    void choose(int index);
 }
