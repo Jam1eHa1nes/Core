@@ -112,6 +112,50 @@ public class PlaywrightActionsTest {
     }
 
     @Test
+    public void testCollectSizeAndChooseGetText() {
+        ui.open(pages.page1.toUri().toString());
+        // collect all anchors
+        ui.collect(TargetFactory.tag("a"));
+        assertEquals(3, ui.size());
+
+        // choose the second anchor and read its text without providing a target
+        ui.choose(1);
+        assertEquals("Click 'Me'", ui.getText().trim());
+    }
+
+    @Test
+    public void testChooseThenClickNavigates() {
+        ui.open(pages.page1.toUri().toString());
+        ui.collect(TargetFactory.tag("a"));
+        // Choose the first anchor which navigates to page2.html
+        ui.choose(0);
+        ui.click();
+        assertEquals("Second Page", ui.title());
+    }
+
+    @Test
+    public void testChooseErrors() {
+        ui.open(pages.page1.toUri().toString());
+        // choose before collect should throw
+        try {
+            ui.choose(0);
+            fail("Expected IllegalStateException when choose() called before collect()");
+        } catch (IllegalStateException expected) {
+            // ok
+        }
+
+        // After collect, out-of-bounds index should throw
+        ui.collect(TargetFactory.tag("a"));
+        int n = ui.size();
+        try {
+            ui.choose(n);
+            fail("Expected IndexOutOfBoundsException for index==size");
+        } catch (IndexOutOfBoundsException expected) {
+            // ok
+        }
+    }
+
+    @Test
     public void testScreenshot() {
         ui.open(pages.page1.toUri().toString());
         Path shot = Path.of(System.getProperty("java.io.tmpdir"), "pw-shot-" + System.nanoTime() + ".png");

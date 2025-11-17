@@ -10,12 +10,16 @@ import com.microsoft.playwright.options.WaitForSelectorState;
 import core.ui.Target;
 import core.ui.TargetFactory;
 import core.ui.UiActions;
+import java.util.Collections;
+import java.util.List;
 
 public class PlaywrightActions implements UiActions {
     private Playwright playwright;
     private Browser browser;
     private Page page;
     private Target currentTarget;
+    private List<Locator> collected = Collections.emptyList();
+    private int chosenIndex = -1;
 
     public PlaywrightActions() {
         this(true);
@@ -36,6 +40,8 @@ public class PlaywrightActions implements UiActions {
     public void focus(Target target) {
         page.locator(toSelector(target)).focus();
         this.currentTarget = target;
+        // Reset any previously chosen element when focus changes
+        this.chosenIndex = -1;
     }
 
     // Maintain element context only via focus(selector)
@@ -48,7 +54,7 @@ public class PlaywrightActions implements UiActions {
 
     @Override
     public void click() {
-        page.locator(requireContext()).click();
+        currentLocator().click();
     }
 
     @Override
@@ -59,7 +65,7 @@ public class PlaywrightActions implements UiActions {
 
     @Override
     public void compose(String text) {
-        page.locator(requireContext()).fill(text);
+        currentLocator().fill(text);
     }
 
     @Override
@@ -70,7 +76,7 @@ public class PlaywrightActions implements UiActions {
 
     @Override
     public String getText() {
-        return page.locator(requireContext()).textContent();
+        return currentLocator().textContent();
     }
 
     @Override
@@ -88,7 +94,7 @@ public class PlaywrightActions implements UiActions {
 
     @Override
     public boolean exists() {
-        return page.locator(requireContext()).count() > 0;
+        return currentLocator().count() > 0;
     }
 
     @Override
@@ -99,7 +105,7 @@ public class PlaywrightActions implements UiActions {
 
     @Override
     public boolean isVisible() {
-        return page.locator(requireContext()).isVisible();
+        return currentLocator().isVisible();
     }
 
     @Override
@@ -110,7 +116,7 @@ public class PlaywrightActions implements UiActions {
 
     @Override
     public void waitForVisible(long timeoutMs) {
-        page.locator(requireContext()).waitFor(new Locator.WaitForOptions()
+        currentLocator().waitFor(new Locator.WaitForOptions()
                 .setTimeout(timeoutMs)
                 .setState(WaitForSelectorState.VISIBLE));
     }
@@ -123,7 +129,7 @@ public class PlaywrightActions implements UiActions {
 
     @Override
     public String value() {
-        Locator loc = page.locator(requireContext());
+        Locator loc = currentLocator();
         try {
             return loc.inputValue();
         } catch (RuntimeException e) {
@@ -140,7 +146,7 @@ public class PlaywrightActions implements UiActions {
 
     @Override
     public String attribute(String name) {
-        return page.locator(requireContext()).getAttribute(name);
+        return currentLocator().getAttribute(name);
     }
 
     @Override
@@ -151,7 +157,7 @@ public class PlaywrightActions implements UiActions {
 
     @Override
     public void hover() {
-        page.locator(requireContext()).hover();
+        currentLocator().hover();
     }
 
     @Override
@@ -197,7 +203,7 @@ public class PlaywrightActions implements UiActions {
 
     @Override
     public void clear() {
-        page.locator(requireContext()).fill("");
+        currentLocator().fill("");
     }
 
     /** Double-click the element. */
@@ -209,7 +215,7 @@ public class PlaywrightActions implements UiActions {
 
     @Override
     public void doubleClick() {
-        page.locator(requireContext()).dblclick();
+        currentLocator().dblclick();
     }
 
     /** Select an option from a select element by visible text (label). */
@@ -221,7 +227,7 @@ public class PlaywrightActions implements UiActions {
 
     @Override
     public void selectByText(String text) {
-        page.locator(requireContext()).selectOption(new SelectOption().setLabel(text));
+        currentLocator().selectOption(new SelectOption().setLabel(text));
     }
 
     /** Select an option from a select element by value. */
@@ -233,7 +239,7 @@ public class PlaywrightActions implements UiActions {
 
     @Override
     public void selectByValue(String value) {
-        page.locator(requireContext()).selectOption(new SelectOption().setValue(value));
+        currentLocator().selectOption(new SelectOption().setValue(value));
     }
 
     /** Wait until the element is hidden or detached. */
@@ -245,7 +251,7 @@ public class PlaywrightActions implements UiActions {
 
     @Override
     public void waitForHidden(long timeoutMs) {
-        page.locator(requireContext()).waitFor(new Locator.WaitForOptions()
+        currentLocator().waitFor(new Locator.WaitForOptions()
                 .setTimeout(timeoutMs)
                 .setState(WaitForSelectorState.HIDDEN));
     }
@@ -259,7 +265,7 @@ public class PlaywrightActions implements UiActions {
 
     @Override
     public void scrollIntoView() {
-        page.locator(requireContext()).scrollIntoViewIfNeeded();
+        currentLocator().scrollIntoViewIfNeeded();
     }
 
     /** Press a key or key combination on the element (e.g., "Control+A"). */
@@ -271,7 +277,7 @@ public class PlaywrightActions implements UiActions {
 
     @Override
     public void press(String key) {
-        page.locator(requireContext()).press(key);
+        currentLocator().press(key);
     }
 
     /** Press one or more key sequences on the element. */
@@ -286,7 +292,7 @@ public class PlaywrightActions implements UiActions {
         if (keys == null || keys.length == 0) return;
         for (CharSequence k : keys) {
             if (k != null) {
-                page.locator(requireContext()).press(k.toString());
+                currentLocator().press(k.toString());
             }
         }
     }
@@ -300,7 +306,7 @@ public class PlaywrightActions implements UiActions {
 
     @Override
     public void setChecked(boolean checked) {
-        page.locator(requireContext()).setChecked(checked);
+        currentLocator().setChecked(checked);
     }
 
     /** Upload a file to an input[type=file]. */
@@ -312,7 +318,33 @@ public class PlaywrightActions implements UiActions {
 
     @Override
     public void uploadFile(String path) {
-        page.locator(requireContext()).setInputFiles(java.nio.file.Paths.get(path));
+        currentLocator().setInputFiles(java.nio.file.Paths.get(path));
+    }
+
+    // ---- Collection utilities ----
+    @Override
+    public void collect(Target target) {
+        String selector = toSelector(target);
+        this.collected = page.locator(selector).all();
+        this.chosenIndex = -1;
+        // keep knowledge of the target for consistency
+        // but currentTarget is not changed by collect
+    }
+
+    @Override
+    public int size() {
+        return collected == null ? 0 : collected.size();
+    }
+
+    @Override
+    public void choose(int index) {
+        if (collected == null || collected.isEmpty()) {
+            throw new IllegalStateException("No elements have been collected. Call collect(target) first.");
+        }
+        if (index < 0 || index >= collected.size()) {
+            throw new IndexOutOfBoundsException("Index " + index + " out of bounds for collected size " + collected.size());
+        }
+        this.chosenIndex = index;
     }
 
     private String requireContext() {
@@ -320,6 +352,13 @@ public class PlaywrightActions implements UiActions {
             throw new IllegalStateException("No element context set. Call focus(target) first.");
         }
         return toSelector(currentTarget);
+    }
+
+    private Locator currentLocator() {
+        if (chosenIndex >= 0 && collected != null && chosenIndex < collected.size()) {
+            return collected.get(chosenIndex);
+        }
+        return page.locator(requireContext());
     }
 
     private String toSelector(Target target) {

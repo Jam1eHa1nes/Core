@@ -23,10 +23,14 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.Collections;
+import java.util.List;
 
 public class SeleniumActions implements UiActions {
     private final WebDriver driver;
     private Target currentTarget;
+    private List<WebElement> collected = Collections.emptyList();
+    private int chosenIndex = -1;
 
     // Suppress noisy Selenium CDP mismatch warnings in test console output.
     // Examples:
@@ -51,6 +55,19 @@ public class SeleniumActions implements UiActions {
             // Use new headless for modern Chrome
             options.addArguments("--headless=new");
         }
+
+        // Improve stability in CI/containerized environments (e.g., GitHub Actions)
+        // These flags are no-ops on local machines but prevent Chrome from crashing in sandboxed runners.
+        // Apply when headless or when CI environment variable is present.
+        boolean isCi = Boolean.parseBoolean(System.getenv().getOrDefault("CI", "false"));
+        if (headless || isCi) {
+            options.addArguments("--no-sandbox");
+            options.addArguments("--disable-dev-shm-usage");
+            // Avoid origin checks that can fail under some runner network setups
+            options.addArguments("--remote-allow-origins=*");
+            // Set a deterministic window size so some layouts don’t hide elements
+            options.addArguments("--window-size=1920,1080");
+        }
         this.driver = new ChromeDriver(options);
     }
 
@@ -69,6 +86,8 @@ public class SeleniumActions implements UiActions {
             el.click();
         }
         this.currentTarget = target;
+        // reset any chosen element when focus changes
+        this.chosenIndex = -1;
     }
 
     // Maintain element context only via focus(selector)
@@ -81,7 +100,7 @@ public class SeleniumActions implements UiActions {
 
     @Override
     public void click() {
-        driver.findElement(toBy(requireContext())).click();
+        currentElement().click();
     }
 
     @Override
@@ -92,7 +111,7 @@ public class SeleniumActions implements UiActions {
 
     @Override
     public void compose(String text) {
-        WebElement el = driver.findElement(toBy(requireContext()));
+        WebElement el = currentElement();
         el.clear();
         el.sendKeys(text);
     }
@@ -111,14 +130,20 @@ public class SeleniumActions implements UiActions {
 
     @Override
     public String getText() {
-        By by = toBy(requireContext());
         // Retry a few times to mitigate StaleElementReferenceException that can occur after navigation
         int attempts = 0;
         while (true) {
             try {
                 // Wait briefly for the element to be present and visible each attempt
                 WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(5));
-                WebElement el = wait.until(ExpectedConditions.visibilityOfElementLocated(by));
+                WebElement el;
+                if (chosenIndex >= 0 && collected != null && chosenIndex < collected.size()) {
+                    el = collected.get(chosenIndex);
+                    wait.until(ExpectedConditions.visibilityOf(el));
+                } else {
+                    By by = toBy(requireContext());
+                    el = wait.until(ExpectedConditions.visibilityOfElementLocated(by));
+                }
                 return el.getText();
             } catch (org.openqa.selenium.StaleElementReferenceException e) {
                 if (++attempts >= 3) throw e;
@@ -143,6 +168,13 @@ public class SeleniumActions implements UiActions {
 
     @Override
     public boolean exists() {
+        if (chosenIndex >= 0 && collected != null && chosenIndex < collected.size()) {
+            try {
+                return collected.get(chosenIndex).isDisplayed();
+            } catch (Exception e) {
+                return false;
+            }
+        }
         return !driver.findElements(toBy(requireContext())).isEmpty();
     }
 
@@ -155,6 +187,9 @@ public class SeleniumActions implements UiActions {
     @Override
     public boolean isVisible() {
         try {
+            if (chosenIndex >= 0 && collected != null && chosenIndex < collected.size()) {
+                return collected.get(chosenIndex).isDisplayed();
+            }
             return driver.findElement(toBy(requireContext())).isDisplayed();
         } catch (Exception e) {
             return false;
@@ -170,7 +205,11 @@ public class SeleniumActions implements UiActions {
     @Override
     public void waitForVisible(long timeoutMs) {
         WebDriverWait wait = new WebDriverWait(driver, Duration.ofMillis(timeoutMs));
-        wait.until(ExpectedConditions.visibilityOfElementLocated(toBy(requireContext())));
+        if (chosenIndex >= 0 && collected != null && chosenIndex < collected.size()) {
+            wait.until(ExpectedConditions.visibilityOf(collected.get(chosenIndex)));
+        } else {
+            wait.until(ExpectedConditions.visibilityOfElementLocated(toBy(requireContext())));
+        }
     }
 
     @Override
@@ -181,7 +220,7 @@ public class SeleniumActions implements UiActions {
 
     @Override
     public String value() {
-        WebElement el = driver.findElement(toBy(requireContext()));
+        WebElement el = currentElement();
         String val = el.getAttribute("value");
         if (val != null) return val;
         String txt = el.getText();
@@ -196,7 +235,7 @@ public class SeleniumActions implements UiActions {
 
     @Override
     public String attribute(String name) {
-        return driver.findElement(toBy(requireContext())).getAttribute(name);
+        return currentElement().getAttribute(name);
     }
 
     @Override
@@ -207,7 +246,7 @@ public class SeleniumActions implements UiActions {
 
     @Override
     public void hover() {
-        WebElement el = driver.findElement(toBy(requireContext()));
+        WebElement el = currentElement();
         new Actions(driver).moveToElement(el).perform();
     }
 
@@ -264,7 +303,7 @@ public class SeleniumActions implements UiActions {
 
     @Override
     public void clear() {
-        driver.findElement(toBy(requireContext())).clear();
+        currentElement().clear();
     }
 
     /** Double-click the element. */
@@ -276,7 +315,7 @@ public class SeleniumActions implements UiActions {
 
     @Override
     public void doubleClick() {
-        WebElement el = driver.findElement(toBy(requireContext()));
+        WebElement el = currentElement();
         new Actions(driver).doubleClick(el).perform();
     }
 
@@ -289,7 +328,7 @@ public class SeleniumActions implements UiActions {
 
     @Override
     public void selectByText(String text) {
-        new Select(driver.findElement(toBy(requireContext()))).selectByVisibleText(text);
+        new Select(currentElement()).selectByVisibleText(text);
     }
 
     /** Select option by value attribute. */
@@ -301,7 +340,7 @@ public class SeleniumActions implements UiActions {
 
     @Override
     public void selectByValue(String value) {
-        new Select(driver.findElement(toBy(requireContext()))).selectByValue(value);
+        new Select(currentElement()).selectByValue(value);
     }
 
     /** Wait until the element becomes hidden or not present. */
@@ -314,7 +353,11 @@ public class SeleniumActions implements UiActions {
     @Override
     public void waitForHidden(long timeoutMs) {
         WebDriverWait wait = new WebDriverWait(driver, Duration.ofMillis(timeoutMs));
-        wait.until(ExpectedConditions.invisibilityOfElementLocated(toBy(requireContext())));
+        if (chosenIndex >= 0 && collected != null && chosenIndex < collected.size()) {
+            wait.until(ExpectedConditions.invisibilityOf(collected.get(chosenIndex)));
+        } else {
+            wait.until(ExpectedConditions.invisibilityOfElementLocated(toBy(requireContext())));
+        }
     }
 
     /** Scroll element into view using JavaScript. */
@@ -326,7 +369,7 @@ public class SeleniumActions implements UiActions {
 
     @Override
     public void scrollIntoView() {
-        WebElement el = driver.findElement(toBy(requireContext()));
+        WebElement el = currentElement();
         if (driver instanceof JavascriptExecutor js) {
             js.executeScript("arguments[0].scrollIntoView({block:'center', inline:'nearest'});", el);
         } else {
@@ -351,12 +394,12 @@ public class SeleniumActions implements UiActions {
     @Override
     public void press(String key) {
         CharSequence mapped = mapToKeys(key);
-        driver.findElement(toBy(requireContext())).sendKeys(mapped);
+        currentElement().sendKeys(mapped);
     }
 
     @Override
     public void press(CharSequence... keys) {
-        driver.findElement(toBy(requireContext())).sendKeys(keys);
+        currentElement().sendKeys(keys);
     }
 
     private CharSequence mapToKeys(String key) {
@@ -397,7 +440,7 @@ public class SeleniumActions implements UiActions {
 
     @Override
     public void setChecked(boolean checked) {
-        WebElement el = driver.findElement(toBy(requireContext()));
+        WebElement el = currentElement();
         if (el.isSelected() != checked) {
             el.click();
         }
@@ -412,7 +455,30 @@ public class SeleniumActions implements UiActions {
 
     @Override
     public void uploadFile(String path) {
-        driver.findElement(toBy(requireContext())).sendKeys(path);
+        currentElement().sendKeys(path);
+    }
+
+    // ---- Collection utilities ----
+    @Override
+    public void collect(Target target) {
+        this.collected = driver.findElements(toBy(target));
+        this.chosenIndex = -1;
+    }
+
+    @Override
+    public int size() {
+        return collected == null ? 0 : collected.size();
+    }
+
+    @Override
+    public void choose(int index) {
+        if (collected == null || collected.isEmpty()) {
+            throw new IllegalStateException("No elements have been collected. Call collect(target) first.");
+        }
+        if (index < 0 || index >= collected.size()) {
+            throw new IndexOutOfBoundsException("Index " + index + " out of bounds for collected size " + collected.size());
+        }
+        this.chosenIndex = index;
     }
 
     private Target requireContext() {
@@ -420,6 +486,13 @@ public class SeleniumActions implements UiActions {
             throw new IllegalStateException("No element context set. Call focus(target) first.");
         }
         return currentTarget;
+    }
+
+    private WebElement currentElement() {
+        if (chosenIndex >= 0 && collected != null && chosenIndex < collected.size()) {
+            return collected.get(chosenIndex);
+        }
+        return driver.findElement(toBy(requireContext()));
     }
 
     private By toBy(Target target) {

@@ -110,6 +110,45 @@ public class SeleniumActionsTest {
     }
 
     @Test
+    public void testCollectSizeAndChooseGetText() {
+        ui.open(pages.page1.toUri().toString());
+        ui.collect(TargetFactory.tag("a"));
+        assertEquals(3, ui.size());
+
+        ui.choose(1);
+        assertEquals("Click 'Me'", ui.getText().trim());
+    }
+
+    @Test
+    public void testChooseThenClickNavigates() {
+        ui.open(pages.page1.toUri().toString());
+        ui.collect(TargetFactory.tag("a"));
+        ui.choose(0);
+        ui.click();
+        assertEquals("Second Page", ui.title());
+    }
+
+    @Test
+    public void testChooseErrors() {
+        ui.open(pages.page1.toUri().toString());
+        try {
+            ui.choose(0);
+            fail("Expected IllegalStateException when choose() called before collect()");
+        } catch (IllegalStateException expected) {
+            // ok
+        }
+
+        ui.collect(TargetFactory.tag("a"));
+        int n = ui.size();
+        try {
+            ui.choose(n);
+            fail("Expected IndexOutOfBoundsException for index==size");
+        } catch (IndexOutOfBoundsException expected) {
+            // ok
+        }
+    }
+
+    @Test
     public void testScreenshot() {
         ui.open(pages.page1.toUri().toString());
         Path shot = Path.of(System.getProperty("java.io.tmpdir"), "selenium-shot-" + System.nanoTime() + ".png");
