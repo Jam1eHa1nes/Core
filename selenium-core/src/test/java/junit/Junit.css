@@ -1,0 +1,17 @@
+.button-covering {
+    position: relative;
+    top: 27px;
+    right: 3px;
+    border: 1px solid #000000;
+    background-color: rgba(0, 0, 0, 0.2);
+    height: 30px;
+    width: 63px;
+}
+
+#button-covering-div {
+    z-index: -1000;
+}
+
+#button-covering-div-constant {
+    z-index: 1000;
+}
