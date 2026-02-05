@@ -1202,6 +1202,11 @@ public class CommonPage implements CommonPageInterface, com.core.qa.automation.c
         pause(seconds * 1000L);
     }
 
+    @Override
+    public byte[] getScreenshotBytes() {
+        return new byte[0];
+    }
+
     // ========================
     // Screenshots
     // ========================
